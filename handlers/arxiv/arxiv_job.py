@@ -1,4 +1,5 @@
 import requests
+import datetime
 import arxiv
 import os
 
@@ -23,19 +24,30 @@ json_schema = {
     "title": "ArxivPaper",
     "type": "object",
     "properties": {
-        "title": {"type": "string"},
-        "pdf_url": {"type": "string"},
-        "summary": {"type": "string"},
+        "title": {
+            "type": "string",
+            "description": "The title of the paper",
+        },
+        "pdf_url": {
+            "type": "string",
+            "description": "The url to the pdf of the paper",
+        },
+        "summary": {
+            "type": "string",
+            "description": "The summary of the paper",
+        },
     },
     "required": ["title", "pdf_url", "summary"],
 }
 
 
 def fetch_arxiv_papers():
-    search_query = f"abs:retrieval augmentaton"
+    today_date = datetime.date.today().strftime('%Y%m%d')
+    last_week_date = (datetime.date.today() - datetime.timedelta(days=2)).strftime('%Y%m%d')
+    search_query = f"abs:retrieval augmentation AND submittedDate:[{last_week_date}0000 TO {today_date}2359]"
 
     search = arxiv.Search(
-        query=search_query, max_results=3, sort_by=arxiv.SortCriterion.SubmittedDate
+        query=search_query, max_results=50, sort_by=arxiv.SortCriterion.SubmittedDate
     )
 
     papers = []
@@ -48,6 +60,8 @@ def fetch_arxiv_papers():
                 "summary": result.summary,
             }
         )
+
+    print(papers)
 
     return papers
 
@@ -67,6 +81,7 @@ def lambda_handler():
             json_value=paper,
             json_schema=json_schema,
             service_context=service_context,
+            verbose=True
         )
 
         response = nl_query_engine.query(generate_query(paper))
